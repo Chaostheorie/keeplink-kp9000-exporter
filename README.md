@@ -11,25 +11,29 @@ Scrapes port statistics (TX/RX packets, link status, errors) from the web UI HTM
 
 | Metric | Type | Description | Labels |
 |--------|------|-------------|--------|
-| `keeplink_port_tx_good_packets_total` | Counter | Total TX good packets per port | `{port="1"}` |
-| `keeplink_port_rx_good_packets_total` | Counter | Total RX good packets per port | `{port="1"}` |
 | `keeplink_port_link_up` | Gauge | Link status (1=up, 0=down) | `{port="1"}` |
-| `keeplink_scrape_duration_seconds` | Gauge | Last scrape duration | - |
-| `keeplink_scrape_errors_total` | Counter | Total scrape errors | - |
+| `keeplink_port_rx_good_packets_total` | Counter | Total RX good packets per port | `{port="1"}` |
+| `keeplink_port_tx_good_packets_total` | Counter | Total TX good packets per port | `{port="1"}` |
+| `keeplink_port_speed_actual_mbps` | Gauage | Actual Mbps per port | `{port="1000"}` |
 
 ## Quick Start
 
 ```bash
 # Binary
-./keeplink-exporter --switch-ip=192.168.1.168 --listen=:9100
+./exporter-keeplink --ip=192.168.1.168 --cookie="admin=f6fdffe48c908deb0f4c3bd36c032e72" --listen=:9101
 
+# In a different window
+curl localhost:9101/metrics -s |grep keeplink
+```
+
+```bash
 # Docker
-docker run -p 9100:9100 \
+docker run -p 9101:9101 \
   -e SWITCH_IP=192.168.1.168 \
   -e SWITCH_USER=admin \
-  -e SWITCH_PASS=your_password \
+  -e SWITCH_COOKIE="admin=f6fdffe48c908deb0f4c3bd36c032e72" \
   sergiosanche/keeplink-kp9000-exporter:latest
-
+```
 
 # Prometheus Configuration
 
@@ -37,26 +41,23 @@ docker run -p 9100:9100 \
 scrape_configs:
   - job_name: 'keeplink-kp9000'
     static_configs:
-      - targets: ['exporter-host:9100']
+      - targets: ['exporter-host:9101']
     scrape_interval: 30s
 ```
 
 # Configuration Flags
 
---switch-ip=192.168.1.168    Switch IP address
---switch-user=admin          Web UI username (if login required)
---switch-pass=secret         Web UI password
---cookie=admin=abc123        Session cookie (login alternative)
---listen=:9100               Listen address
---timeout=10s                HTTP timeout
+--ip=192.168.1.168                                 Switch IP address
+--cookie="admin=f6fdffe48c908deb0f4c3bd36c032e72"  Session cookie
+--listen=:9101                                     Listen address
 
 # Installation
 
 ```
-git clone https://github.com/YOURUSERNAME/keeplink-kp9000-exporter
+git clone https://github.com/sergiosanche/keeplink-kp9000-exporter
 cd keeplink-kp9000-exporter
 make build
-./keeplink-exporter --switch-ip=192.168.1.168
+./bin/exporter-keeplink --ip=192.168.1.168 --cookie="admin=f6fdffe48c908deb0f4c3bd36c032e72" --listen=:9101
 ```
 
 # Docker
@@ -68,9 +69,9 @@ WORKDIR /src
 RUN CGO_ENABLED=0 GOOS=linux go build -o /bin/exporter .
 
 FROM scratch
-COPY --from=builder /bin/exporter /bin/exporter
-EXPOSE 9100
-ENTRYPOINT ["/bin/exporter"]
+COPY --from=builder /bin/exporter-keeplink /bin/exporter-keeplink
+EXPOSE 9101
+ENTRYPOINT ["/bin/exporter-keeplink"]
 ```
 
 # Compatibility
@@ -80,5 +81,3 @@ ENTRYPOINT ["/bin/exporter"]
 🔄 Other Keeplink models (testing needed)
 
 ❌ SNMP-enabled switches (use snmp_exporter)
-
-
