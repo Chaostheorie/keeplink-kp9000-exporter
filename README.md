@@ -50,6 +50,10 @@ scrape_configs:
 --ip=192.168.1.168                                 Switch IP address
 --cookie="admin=f6fdffe48c908deb0f4c3bd36c032e72"  Session cookie
 --listen=:9101                                     Listen address
+--password=''                                      Admin user password (initial username: admin)
+--username=''                                      Admin user username (initial username: password)
+
+Specifying a cookie will supseed the username/password.
 
 # Installation
 

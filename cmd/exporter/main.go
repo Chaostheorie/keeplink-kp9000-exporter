@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/md5"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -21,19 +24,21 @@ import (
 type Config struct {
 	SwitchIP string
 	Cookie   string
+	Username string
+	Password string
 	Listen   string
 	Timeout  time.Duration
 }
 
 // PortMetrics contains all metrics for a port
 type PortMetrics struct {
-	Port              string
-	TxGood            float64
-	RxGood            float64
-	LinkUp            float64
-	ConfigSpeedMbps   float64
-	ActualSpeedMbps   float64
-	Duplex            float64
+	Port            string
+	TxGood          float64
+	RxGood          float64
+	LinkUp          float64
+	ConfigSpeedMbps float64
+	ActualSpeedMbps float64
+	Duplex          float64
 }
 
 // Exporter implements prometheus.Collector
@@ -46,31 +51,44 @@ type Exporter struct {
 	client *http.Client
 
 	// Cached descriptors (created once, reused)
-	portTxGoodTotal      *prometheus.Desc
-	portRxGoodTotal      *prometheus.Desc
-	portLinkUp           *prometheus.Desc
-	portSpeedConfigMbps  *prometheus.Desc
-	portSpeedActualMbps  *prometheus.Desc
-	portSpeedDuplex      *prometheus.Desc
-	scrapeLastTimestamp  *prometheus.Desc
-	scrapeDurationMs     *prometheus.Desc
-	scrapeErrors         *prometheus.Desc
+	portTxGoodTotal     *prometheus.Desc
+	portRxGoodTotal     *prometheus.Desc
+	portLinkUp          *prometheus.Desc
+	portSpeedConfigMbps *prometheus.Desc
+	portSpeedActualMbps *prometheus.Desc
+	portSpeedDuplex     *prometheus.Desc
+	scrapeLastTimestamp *prometheus.Desc
+	scrapeDurationMs    *prometheus.Desc
+	scrapeErrors        *prometheus.Desc
 
 	// Metrics cache
-	lastMetrics     []PortMetrics
-	lastScrapeTime  time.Time
-	lastScrapeErr   error
-	lastScrapeDur   time.Duration
+	lastMetrics    []PortMetrics
+	lastScrapeTime time.Time
+	lastScrapeErr  error
+	lastScrapeDur  time.Duration
 }
+
+var (
+	ErrNoCredentials = errors.New("A cookie or password & username is required")
+)
 
 // NewExporter creates and initializes a new Exporter
 func NewExporter(cfg *Config, logger *log.Logger) (*Exporter, error) {
 	if cfg.SwitchIP == "" {
 		return nil, fmt.Errorf("SwitchIP is required")
 	}
+
 	if cfg.Cookie == "" {
-		return nil, fmt.Errorf("Cookie is required")
+		if cfg.Username == "" || cfg.Password == "" {
+			return nil, ErrNoCredentials
+		}
+
+		sum := md5.Sum([]byte(cfg.Username + cfg.Password))
+		cfg.Cookie = "admin=" + hex.EncodeToString(sum[:])
+	} else if cfg.Username != "" && cfg.Password != "" {
+		logger.Println("a cookie takes precedence over username/password")
 	}
+
 	if cfg.Timeout == 0 {
 		cfg.Timeout = 10 * time.Second
 	}
@@ -541,6 +559,8 @@ func decode64bit(raw string) float64 {
 var (
 	switchIP   string
 	cookie     string
+	username   string
+	password   string
 	listenAddr string = ":9101"
 	timeout    int    = 10
 )
@@ -560,6 +580,8 @@ Exports port statistics including TX/RX packets, link status, and speed/duplex c
 		cfg := &Config{
 			SwitchIP: switchIP,
 			Cookie:   cookie,
+			Username: username,
+			Password: password,
 			Listen:   listenAddr,
 			Timeout:  time.Duration(timeout) * time.Second,
 		}
@@ -598,6 +620,8 @@ Exports port statistics including TX/RX packets, link status, and speed/duplex c
 func init() {
 	rootCmd.Flags().StringVarP(&switchIP, "ip", "i", "", "Switch IP address (required)")
 	rootCmd.Flags().StringVarP(&cookie, "cookie", "c", "", "HTTP Cookie for authentication")
+	rootCmd.Flags().StringVarP(&username, "username", "u", "", "password for HTTP cookie")
+	rootCmd.Flags().StringVarP(&password, "password", "p", "", "username for HTTP cookie")
 	rootCmd.Flags().StringVarP(&listenAddr, "listen", "l", listenAddr, "Listen address for metrics endpoint")
 	rootCmd.Flags().IntVar(&timeout, "timeout", timeout, "HTTP request timeout in seconds")
 }
