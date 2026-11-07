@@ -23,3 +23,30 @@ Scrapes port statistics (TX/RX packets, link status, errors) from the web UI HTM
 # In a different window
 curl localhost:9101/metrics -s |grep keeplink
 ```
+
+## NixOS
+
+Import the flake's `nixosModules.default` and configure the switches to scrape:
+
+```nix
+{
+  imports = [ inputs.keeplink-exporter.nixosModules.default ];
+
+  services.keeplink-exporter = {
+    enable = true;
+    config.switches = [
+      {
+        switchIP = "192.168.1.168";
+        usernameFile = "/run/secrets/keeplink-username";
+        passwordFile = "/run/secrets/keeplink-password";
+        timeout = "10s";
+      }
+    ];
+  };
+}
+```
+
+The module writes the scrape configuration as YAML and uses systemd credentials
+to make each username and password file available to the service's dynamic user.
+Use runtime path strings for these files. The optional timeout defaults to `"0s"`
+(no timeout). Metrics listen on `127.0.0.1:8192`.
