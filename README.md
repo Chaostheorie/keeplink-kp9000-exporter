@@ -1,7 +1,7 @@
 # Keeplink KP9000 Prometheus Exporter (Fork)
 
 Prometheus exporter for **Keeplink KP-9000-9XHML-X** (8x 2.5GbE + 1x 10G SFP+ managed switch).
-Fork with support for multiple switches and username/password authentication.
+Fork from [github:sergiosanche/keeplink-kp9000-exporter](https://github.com/sergiosanche/keeplink-kp9000-exporter) with support for multiple switches and username/password authentication.
 
 Scrapes port statistics (TX/RX packets, link status, errors) from the web UI HTML (no SNMP support).
 
