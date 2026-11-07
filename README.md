@@ -34,6 +34,7 @@ Import the flake's `nixosModules.default` and configure the switches to scrape:
 
   services.keeplink-exporter = {
     enable = true;
+    listenAddress = "127.0.0.1:8192";
     config.switches = [
       {
         switchIP = "192.168.1.168";
@@ -49,4 +50,5 @@ Import the flake's `nixosModules.default` and configure the switches to scrape:
 The module writes the scrape configuration as YAML and uses systemd credentials
 to make each username and password file available to the service's dynamic user.
 Use runtime path strings for these files. The optional timeout defaults to `"0s"`
-(no timeout). Metrics listen on `127.0.0.1:8192`.
+(no timeout). Metrics listen on `127.0.0.1:8192` by default; change `listenAddress`
+to use another address or port.

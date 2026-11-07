@@ -3,6 +3,7 @@
   config,
   lib,
   pkgs,
+  utils,
   ...
 }:
 let
@@ -28,6 +29,12 @@ in
 {
   options.services.keeplink-exporter = {
     enable = lib.mkEnableOption "Keeplink Prometheus exporter";
+    listenAddress = lib.mkOption {
+      type = lib.types.str;
+      default = "127.0.0.1:8192";
+      example = "0.0.0.0:8192";
+      description = "Address and port on which to serve Prometheus metrics.";
+    };
     config.switches = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {
@@ -73,9 +80,13 @@ in
       wants = [ "network-online.target" ];
       after = [ "network-online.target" ];
       serviceConfig = {
-        ExecStart = "${
-          lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default
-        } --scrape-config ${configFile}";
+        ExecStart = utils.escapeSystemdExecArgs [
+          (lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.default)
+          "--scrape-config"
+          configFile
+          "--listen"
+          cfg.listenAddress
+        ];
         DynamicUser = true;
         LoadCredential = lib.concatMap (switch: [
           "${switch.credentialPrefix}-username:${switch.usernameFile}"
