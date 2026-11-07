@@ -1,17 +1,28 @@
 .PHONY: build run test docker clean
 
-build:
-	go build -o bin/exporter-keeplink ./cmd/exporter
+SRC := $(shell find . -type f -name '*.go' -not -path '*/vendor/*' -print)
+DEPS := $(shell find vendor -type f -print) go.mod go.sum
+BINDIR := bin
 
-run:
-	./bin/exporter-keeplink -i 192.168.1.168 --cookie="admin=f6fdffe48c908deb0f4c3bd36c032e72" --listen=:9101
+.PHONY: all
+all: build
 
-test:
-	go test ./...
+.PHONY: build
+build: $(BINDIR)/exporter-keeplink
 
-docker:
-	docker build -t sergiosanche/keeplink-kp9000-exporter .
+$(BINDIR):
+	mkdir -p '$@'
+$(BINDIR)/exporter-keeplink: $(SRC) $(DEPS)
+	go build -o $(BINDIR)/exporter-keeplink $(SRC)
 
+.PHONY: vendor
+vendor:
+	go mod tidy
+	go mod vendor
+	go mod verify
+
+.PHONY: clean
 clean:
-	rm -rf bin/
+	rm -r $(BINDIR)
+	go clean
 
